@@ -31,6 +31,7 @@ public class SpringShoppingCart2Application {
     @Autowired
     private Environment env;
 
+    //===========================
 	public static void main(String[] args) {
 		SpringApplication.run(SpringShoppingCart2Application.class, args);
 	}
