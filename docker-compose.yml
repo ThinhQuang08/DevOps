@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+    container_name: shoe_shop_backend
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./FE:/app/frontend
+    environment:
+      - SPRING_THYMELEAF_PREFIX=file:/app/frontend/templates/
+      - SPRING_WEB_RESOURCES_STATIC-LOCATIONS=file:/app/frontend/static/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.1.210:3306/shoeshop?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=shoeshop
+      - SPRING_DATASOURCE_PASSWORD=shoeshop
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate # Hoặc none, update
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MySQLDialect
+    networks:
+      - default
