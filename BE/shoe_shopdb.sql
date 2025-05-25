@@ -21,7 +21,12 @@ SET time_zone = "+00:00";
 --
 -- Database: `shoe_shopdb`
 --
+CREATE DATABASE IF NOT EXISTS shoeshop;
+USE shoeshop;
 
+CREATE USER IF NOT EXISTS 'shoeshop'@'%' IDENTIFIED BY 'shoeshop';
+GRANT ALL PRIVILEGES ON shoeshop.* TO 'shoeshop_app_user'@'%';
+FLUSH PRIVILEGES;
 -- --------------------------------------------------------
 
 --

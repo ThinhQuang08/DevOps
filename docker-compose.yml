@@ -13,11 +13,45 @@ services:
     environment:
       - SPRING_THYMELEAF_PREFIX=file:/app/frontend/templates/
       - SPRING_WEB_RESOURCES_STATIC-LOCATIONS=file:/app/frontend/static/
-      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.1.210:3306/shoeshop?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/shoeshop?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
       - SPRING_DATASOURCE_USERNAME=shoeshop
       - SPRING_DATASOURCE_PASSWORD=shoeshop
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate # Hoặc none, update
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MySQLDialect
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MariaDBDialect
+
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
-      - default
+      - shoe_shop_network
+
+  # database
+  db:
+    image: mariadb:10.5
+    container_name: shoe_shop_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 0810
+      MYSQL_DATABASE: shoeshop
+      MYSQL_USER: shoeshop
+      MYSQL_PASSWORD: shoeshop
+    volumes:
+      - mariadb_data_volume:/var/lib/mysql
+      - ./BE/shoe_shopdb.sql:/docker-entrypoint-initdb.d/init_schema.sql
+    ports:
+      - "3308:3306"
+    networks:
+      - shoe_shop_network
+    healthcheck: # kiểm tra xem DB đã sẵn sàng chưa
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-ushoeshop", "-pshoeshop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mariadb_data_volume:
+
+networks:
+  shoe_shop_network:
+    driver: bridge 
