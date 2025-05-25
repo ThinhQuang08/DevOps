@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+
+  frontend:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: shoe_shop_frontend
+    ports:
+      - "8000:80"
+    volumes:
+      # Mount thư mục FE/static từ host vào thư mục mà Nginx sẽ phục vụ
+      - ./FE/static:/usr/share/nginx/html/static:ro # :ro là read-only
+    depends_on:
+      - backend # Nginx cần backend để proxy request
+    networks:
+      - shoe_shop_network
+
   backend:
     build:
       context: ./BE
