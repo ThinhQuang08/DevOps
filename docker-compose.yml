@@ -35,6 +35,8 @@ services:
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate # Hoặc none, update
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MariaDBDialect
+      - SERVER_FORWARD_HEADERS_STRATEGY=NATIVE
+      - SERVER_SERVLET_CONTEXT_PATH=/
 
     depends_on:
       db:
