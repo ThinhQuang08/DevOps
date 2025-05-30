@@ -37,7 +37,34 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MariaDBDialect
       - SERVER_FORWARD_HEADERS_STRATEGY=NATIVE
       - SERVER_SERVLET_CONTEXT_PATH=/
+      - PRODUCT_SERVICE_URL=http://product-service:8081/api/v1/products
 
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - shoe_shop_network
+
+  #product-service
+  product-service:
+    build:
+      context: ./productService
+      dockerfile: Dockerfile
+    container_name: shoe_shop_product_service
+    ports:
+      - "8081:8081" # Map cổng 8081 của product-service container ra cổng 8081 của host
+    environment:
+      - SPRING_APPLICATION_NAME=product-service
+      - SERVER_PORT=8081
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/shoeshop?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=shoeshop # Dùng chung user DB
+      - SPRING_DATASOURCE_PASSWORD=shoeshop
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MariaDBDialect # Hoặc MariaDB103Dialect
+
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=*
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW-DETAILS=always
     depends_on:
       db:
         condition: service_healthy
