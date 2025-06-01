@@ -61,13 +61,36 @@ public class ProductController {
     }
 
     // PUT /api/v1/products/{code} - Cập nhật sản phẩm
-    @PutMapping(value = "/{code}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<?> updateProduct(@PathVariable String code,
-                                           @ModelAttribute ProductForm productForm) {
-        // Đảm bảo code trong path được sử dụng để xác định sản phẩm cần cập nhật
-        productForm.setCode(code);
+    // @PutMapping(value = "/{code}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    // public ResponseEntity<?> updateProduct(@PathVariable String code,
+    //                                        @ModelAttribute ProductForm productForm) {
+    //     // Đảm bảo code trong path được sử dụng để xác định sản phẩm cần cập nhật
+    //     productForm.setCode(code);
+    //     try {
+    //         ProductInfo updatedProduct = productService.saveProduct(productForm); // saveProduct sẽ xử lý cả tạo mới và cập nhật
+    //         if (updatedProduct == null) { // Trường hợp saveProduct trả về null nếu không tìm thấy để cập nhật (logic cũ)
+    //             return ResponseEntity.notFound().build();
+    //         }
+    //         return ResponseEntity.ok(updatedProduct);
+    //     } catch (IllegalArgumentException e) {
+    //         return ResponseEntity.badRequest().body(e.getMessage());
+    //     } catch (IOException e) {
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file: " + e.getMessage());
+    //     } catch (RuntimeException e) { // Ví dụ: ProductNotFoundException từ service.deleteProduct
+    //         if (e.getMessage() != null && e.getMessage().contains("not found")) {
+    //              return ResponseEntity.notFound().build();
+    //         }
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred during update.");
+    //     }
+    // }
+
+   @PutMapping(value = "/{codeFromPath}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<?> updateProduct(@PathVariable String codeFromPath,
+                                        @ModelAttribute ProductForm formWithoutCode) {
+        formWithoutCode.setCode(codeFromPath); // Gán code từ path vào form
+        
         try {
-            ProductInfo updatedProduct = productService.saveProduct(productForm); // saveProduct sẽ xử lý cả tạo mới và cập nhật
+            ProductInfo updatedProduct = productService.saveProduct(formWithoutCode); // saveProduct sẽ xử lý cả tạo mới và cập nhật
             if (updatedProduct == null) { // Trường hợp saveProduct trả về null nếu không tìm thấy để cập nhật (logic cũ)
                 return ResponseEntity.notFound().build();
             }
@@ -81,8 +104,8 @@ public class ProductController {
                  return ResponseEntity.notFound().build();
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred during update.");
-        }
-    }
+        }      
+}
 
     // DELETE /api/v1/products/{code} - Xóa sản phẩm
     @DeleteMapping("/{code}")
