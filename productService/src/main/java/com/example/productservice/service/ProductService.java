@@ -19,6 +19,5 @@ public interface ProductService {
 
     void deleteProduct(String code);
 
-    // (Tùy chọn) Nếu cần lấy cả ảnh, có thể thêm phương thức
-    // Optional<byte[]> getProductImageByCode(String code);
+    Optional<byte[]> getProductImageBytesByCode(String code);
 }

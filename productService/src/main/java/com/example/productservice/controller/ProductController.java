@@ -95,12 +95,20 @@ public class ProductController {
         }
     }
 
-    // (Tùy chọn) Endpoint để lấy ảnh sản phẩm
-    // @GetMapping("/{code}/image")
-    // public ResponseEntity<byte[]> getProductImage(@PathVariable String code) {
-    //     Optional<byte[]> imageBytesOpt = productService.getProductImageByCode(code); // Giả sử có phương thức này
-    //     return imageBytesOpt
-    //             .map(bytes -> ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes)) // Hoặc IMAGE_PNG
-    //             .orElseGet(() -> ResponseEntity.notFound().build());
-    // }
+    @GetMapping("/{code}/image")
+    public ResponseEntity<byte[]> getProductImage(@PathVariable String code) {
+        // Cách 1: Nếu ProductService có phương thức trả về Optional<Product>
+        // Optional<Product> productOpt = productService.getRawProductByCode(code); // Cần tạo phương thức này trong service
+        // if (productOpt.isPresent() && productOpt.get().getImage() != null) {
+        //    byte[] imageBytes = productOpt.get().getImage();
+        //    // Đoán ContentType dựa trên vài byte đầu hoặc mặc định là JPEG/PNG
+        //    return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(imageBytes);
+        // }
+
+        // Cách 2: Nếu ProductService có phương thức trả về Optional<byte[]> (tốt hơn)
+        Optional<byte[]> imageBytesOpt = productService.getProductImageBytesByCode(code); // Cần tạo phương thức này
+        return imageBytesOpt
+                .map(bytes -> ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes)) // Hoặc IMAGE_PNG
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 }

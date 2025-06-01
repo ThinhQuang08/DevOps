@@ -109,4 +109,16 @@ public class ProductServiceImpl implements ProductService {
         }
         return new ProductInfo(product.getCode(), product.getName(), product.getPrice());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<byte[]> getProductImageBytesByCode(String code) {
+        Optional<Product> productOpt = productRepository.findById(code);
+        if (productOpt.isPresent() && productOpt.get().getImage() != null) {
+            return Optional.of(productOpt.get().getImage());
+        }
+        return Optional.empty();
+    }
+
+    
 }
