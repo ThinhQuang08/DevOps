@@ -84,7 +84,8 @@ CREATE TABLE `Order_details` (
   `PRICE` double NOT NULL,
   `QUANITY` int(11) NOT NULL,
   `ORDER_ID` varchar(50) COLLATE latin1_general_ci NOT NULL,
-  `PRODUCT_ID` varchar(20) COLLATE latin1_general_ci NOT NULL
+  `PRODUCT_ID` varchar(20) COLLATE latin1_general_ci NOT NULL,
+  `Product_Name_Snapshot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_general_ci;
 
 --

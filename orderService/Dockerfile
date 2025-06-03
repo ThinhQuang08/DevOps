@@ -1,18 +1,20 @@
 # build stage
-FROM maven:3.5.3-jdk-8-alpine AS product_builder 
+FROM maven:3.5.3-jdk-8-alpine AS order_builder 
 
 WORKDIR /app-build
+
 COPY pom.xml .
 COPY src ./src
+
 RUN mvn clean package -DskipTests
 
-# STAGE 2: Tạo image chạy ứng dụng
+#run stage
 FROM openjdk:8-jre-slim
-
-# Cài đặt curl
+# cài curl
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=product_builder /app-build/target/product-service-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8081
+EXPOSE 8082
+
+COPY --from=order_builder /app-build/target/order-service-0.0.1-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
