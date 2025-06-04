@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
+
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 // import org.springframework.transaction.annotation.Transactional; // Có thể không cần ở đây nữa
+
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -29,11 +31,14 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+
 // import com.example.demo.dao.OrderDAO; // Sẽ không dùng OrderDAO trực tiếp nữa
+
 import com.example.demo.form.CustomerForm;
 import com.example.demo.model.CartInfo;
 import com.example.demo.model.CustomerInfo;
 import com.example.demo.model.ProductInfo;
+
 import com.example.demo.model.OrderInfo; // Import OrderInfo DTO của BE
 import com.example.demo.utils.CustomPageImpl;
 import com.example.demo.utils.Utils;
@@ -49,8 +54,10 @@ public class MainController {
    // @Autowired // Không inject OrderDAO nữa
    // private OrderDAO orderDAO;
 
+
    @Autowired
    private RestTemplate restTemplate;
+
 
    @Value("${PRODUCT_SERVICE_URL:http://localhost:8081/api/v1/products}")
    private String productServiceBaseUrl;
@@ -64,37 +71,45 @@ public class MainController {
    @InitBinder
    public void myInitBinder(WebDataBinder dataBinder) {
       Object target = dataBinder.getTarget();
+
       if (target == null) { return; }
       if (target.getClass() == CartInfo.class) {
+
       } else if (target.getClass() == CustomerForm.class) {
          dataBinder.setValidator(customerFormValidator);
       }
    }
 
    @RequestMapping("/403")
+
    public String accessDenied() { return "/403"; }
 
    @RequestMapping("/")
    public String home() { return "index"; }
+
 
    @RequestMapping({ "/productList" })
    public String listProductHandler(Model model,
          @RequestParam(value = "name", defaultValue = "") String likeName,
          @RequestParam(value = "page", defaultValue = "0") int page) {
       final int MAX_RESULT = 8;
+
       String url = productServiceBaseUrl + "?page=" + page + "&size=" + MAX_RESULT;
       if (likeName != null && !likeName.isEmpty()) {
          try {
+
             url += "&name=" + java.net.URLEncoder.encode(likeName, "UTF-8");
          } catch (java.io.UnsupportedEncodingException e) {
             logger.error("Error encoding likeName parameter", e);
          }
       }
+
       try {
          ResponseEntity<CustomPageImpl<ProductInfo>> response = restTemplate.exchange(
                url, HttpMethod.GET, null, new ParameterizedTypeReference<CustomPageImpl<ProductInfo>>() {});
          if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
             model.addAttribute("paginationProducts", response.getBody());
+
          } else {
             logger.warn("Could not load products from API. Status: {}, URL: {}", response.getStatusCode(), url);
             model.addAttribute("errorMessage", "Could not load products. Status: " + response.getStatusCode());
@@ -131,6 +146,7 @@ public class MainController {
             logger.error("Error fetching product from service with code: {}", code, e);
          }
       }
+
       if (productInfo != null) {
          CartInfo cartInfo = Utils.getCartInSession(request);
          cartInfo.addProduct(productInfo, 1);
@@ -141,18 +157,22 @@ public class MainController {
    }
 
    @RequestMapping({ "/shoppingCartRemoveProduct" })
+
    public String removeProductHandler(HttpServletRequest request, @RequestParam(value = "code", defaultValue = "") String code) {
       if (code != null && !code.isEmpty()) {
          CartInfo cartInfo = Utils.getCartInSession(request);
          ProductInfo productInfoToRemove = new ProductInfo();
          productInfoToRemove.setCode(code);
          cartInfo.removeProduct(productInfoToRemove);
+
       }
       return "redirect:/shoppingCart";
    }
 
    @RequestMapping(value = { "/shoppingCart" }, method = RequestMethod.POST)
+
    public String shoppingCartUpdateQty(HttpServletRequest request, @ModelAttribute("cartForm") CartInfo cartForm) {
+
       CartInfo cartInfo = Utils.getCartInSession(request);
       cartInfo.updateQuantity(cartForm);
       return "redirect:/shoppingCart";
@@ -161,8 +181,10 @@ public class MainController {
    @RequestMapping(value = { "/shoppingCart" }, method = RequestMethod.GET)
    public String shoppingCartHandler(HttpServletRequest request, Model model) {
       CartInfo myCart = Utils.getCartInSession(request);
+
       model.addAttribute("cartForm", myCart);
       model.addAttribute("myCart", myCart);
+
       return "shoppingCart";
    }
 
@@ -205,6 +227,7 @@ public class MainController {
       return "shoppingCartConfirmation";
    }
 
+
    // POST: Submit Cart (Save Order via Order Service API)
    @RequestMapping(value = { "/shoppingCartConfirmation" }, method = RequestMethod.POST)
    public String shoppingCartConfirmationSave(HttpServletRequest request, Model model) {
@@ -215,10 +238,12 @@ public class MainController {
          return "redirect:/shoppingCart";
       } else if (!cartInfo.isValidCustomer()) {
          logger.warn("Attempted to save cart with invalid customer info.");
+
          return "redirect:/shoppingCartCustomer";
       }
 
       try {
+
          HttpHeaders headers = new HttpHeaders();
          headers.setContentType(MediaType.APPLICATION_JSON);
          HttpEntity<CartInfo> requestEntity = new HttpEntity<>(cartInfo, headers);
@@ -252,14 +277,17 @@ public class MainController {
          model.addAttribute("myCart", cartInfo);
          return "shoppingCartConfirmation";
       }
+
    }
 
    @RequestMapping(value = { "/shoppingCartFinalize" }, method = RequestMethod.GET)
    public String shoppingCartFinalize(HttpServletRequest request, Model model) {
+
       OrderInfo lastOrder = (OrderInfo) request.getSession().getAttribute("lastOrderInfo");
       // Utils.removeLastOrderedCartInSession(request); // Xem xét có nên xóa ngay không
 
       if (lastOrder == null) {
+
          return "redirect:/shoppingCart";
       }
       model.addAttribute("lastOrderInfo", lastOrder);
@@ -272,6 +300,7 @@ public class MainController {
          try {
             String imageUrl = productServiceBaseUrl + "/" + code + "/image";
             ResponseEntity<byte[]> imageResponse = restTemplate.getForEntity(imageUrl, byte[].class);
+
             if (imageResponse.getStatusCode() == HttpStatus.OK && imageResponse.getBody() != null) {
                String contentType = imageResponse.getHeaders().getFirst("Content-Type");
                response.setContentType(contentType != null ? contentType : "image/jpeg");
