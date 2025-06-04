@@ -29,8 +29,8 @@ public class OrderDAO {
     @Autowired
     private SessionFactory sessionFactory;
  
-    @Autowired
-    private ProductDAO productDAO;
+    // @Autowired
+    // private ProductDAO productDAO;
  
     private int getMaxOrderNum() {
         String sql = "Select max(o.orderNum) from " + Order.class.getName() + " o ";
@@ -65,20 +65,20 @@ public class OrderDAO {
  
         List<CartLineInfo> lines = cartInfo.getCartLines();
  
-        for (CartLineInfo line : lines) {
-            OrderDetail detail = new OrderDetail();
-            detail.setId(UUID.randomUUID().toString());
-            detail.setOrder(order);
-            detail.setAmount(line.getAmount());
-            detail.setPrice(line.getProductInfo().getPrice());
-            detail.setQuanity(line.getQuantity());
+        // for (CartLineInfo line : lines) {
+        //     OrderDetail detail = new OrderDetail();
+        //     detail.setId(UUID.randomUUID().toString());
+        //     detail.setOrder(order);
+        //     detail.setAmount(line.getAmount());
+        //     detail.setPrice(line.getProductInfo().getPrice());
+        //     detail.setQuanity(line.getQuantity());
  
-            String code = line.getProductInfo().getCode();
-            Product product = this.productDAO.findProduct(code);
-            detail.setProduct(product);
+        //     String code = line.getProductInfo().getCode();
+        //     Product product = this.productDAO.findProduct(code);
+        //     detail.setProduct(product);
  
-            session.persist(detail);
-        }
+        //     session.persist(detail);
+        // }
  
         // Order Number!
         cartInfo.setOrderNum(orderNum);

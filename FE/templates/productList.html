@@ -1,94 +1,104 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4"> <!-- Ní có thể dùng springsecurity5 nếu phiên bản Thymeleaf Extras hỗ trợ -->
    <head>
       <meta charset="UTF-8">
       <title>Shoe Shop Online</title>
       <link rel="stylesheet" type="text/css" th:href="@{/static/style.css}" />
+      
       <th:block th:include="_header"></th:block>
    </head>
    <style>
    	.box {
     width: 230px;
-    height: 155px;
+    height: 155px; 
     margin-bottom: 5px;
 	}
-	
+    .display {
+        width: 280px;
+        margin-bottom: 15px;
+    }
    </style>
    <body>
       
       <th:block th:include="_menu"></th:block>
       
-      
-  
     <div class="container">
         <h2 style="font-weight: bold;">Product List</h2>
         
-        
+        <!-- Sử dụng Bootstrap grid system để hiển thị sản phẩm theo hàng và cột -->
         <div class="row">
-          <div class="col-md-12 col-sm-12">
-           <div class="row">
-            
-            <div th:each="prodInfo : ${paginationProducts.list}">
-             <div class="">
-              <div class="display">
-     <img th:src="@{|/productImage?code=${prodInfo.code}|}" alt="..." 
-     style="width:280px; height:320px; margin-bottom:5px; margin-right:2px;">
-     <div class="box">
-      <h6 class="h6_offer">Originals</h6>
-      <p style="font-size:13px;"><span th:utext="${prodInfo.name}"></span><br>
-        $<span th:utext="${prodInfo.price}"></span>
-      </p>
-      <h6 class="h6_offer">2 colors</h6>
-      <a th:href="@{|/buyProduct?code=${prodInfo.code}|}" class="btn btn-link" >Buy Now</a>
+            <!-- Lặp qua danh sách sản phẩm -->
+            <div class="col-md-3 col-sm-6" th:each="prodInfo : ${paginationProducts.content}"> <!-- Giả sử mỗi sản phẩm chiếm 3 cột trên md, 6 cột trên sm -->
+                <div class="display"> <!-- Gom ảnh và box -->
+                    <img th:src="@{|/productImage?code=${prodInfo.code}|}" alt="..." 
+                         style="width:100%; height:auto; max-height:320px; margin-bottom:5px;"> <!-- Responsive image -->
+                    <div class="box">
+                        <h6 class="h6_offer">Originals</h6> <!-- Có thể thay bằng category của sản phẩm -->
+                        <p style="font-size:13px;"><span th:utext="${prodInfo.name}"></span><br>
+                            $<span th:text="${#numbers.formatDecimal(prodInfo.price, 1, 'COMMA', 2, 'POINT')}"></span>
+                            <!-- Định dạng giá tiền cho đẹp hơn -->
+                        </p>
+                        <h6 class="h6_offer">2 colors</h6> <!-- Thông tin này có thể cần lấy từ productInfo -->
+                        <a th:href="@{|/buyProduct?code=${prodInfo.code}|}" class="btn btn-link" >Buy Now</a>
+                    </div>
+                    
+                    <!-- For Manager edit Product -->
+                    <th:block sec:authorize="hasAuthority('ROLE_MANAGER')">
+                        <a style="color:red;"
+                           th:href="@{|/admin/product?code=${prodInfo.code}|}">Edit Product</a>
+                    </th:block>
+                </div>
             </div>
-             </div>
-             
-             <!-- For Manager edit Product -->
-            <th:block sec:authorize="hasAuthority('ROLE_MANAGER')">
-               
-                 <a style="color:red;"
-                    th:href="@{|/admin/product?code=${prodInfo.code}|}">Edit Product</a>
-               
-            </th:block>
-            </div>
-       		</div>
+        </div> <!-- Kết thúc div.row cho sản phẩm -->
       
-       
-      
-       
-      <br/>
+        <br/>
     
-      <!-- ------------------------------Offer end---------------------------------- -->
-      
-      </div> 
+      </div> <!-- Kết thúc div.container cho sản phẩm -->
 
+      <!-- Phân trang -->
+      <div class="container" th:if="${paginationProducts.totalPages > 0}">
+         <div class="row">
+            <div class="col-lg-12">
+                  <nav aria-label="Page navigation">
+                     <ul class="pagination justify-content-center">
 
-          </div>
-        </div>
-        <br><br>
-  <!-- nav start  -->
-  		<div class="row">
-  		<div class="col-lg-6 offset-4">
-        <div class="" th:if="${paginationProducts.totalPages > 1}">
-         <th:block th:each="page : ${paginationProducts.navigationPages}">
-         
-            <a th:href="@{|/productList?page=${page}|}" th:if="${page != -1}"
-               class="btn btn-dark" style="border-radius: 0%; margin:2px;" th:utext="${page}"></a>
-               
-            <span class="btn btn-dark" style="border-radius: 0%; margin:2px;" th:if="${page == -1}"> ... </span>
-             
-         </th:block>
+                        <!-- Nút Previous -->
+                        <li class="page-item" th:classappend="${paginationProducts.first} ? 'disabled'"> <!-- SỬA Ở ĐÂY -->
+                              <a class="page-link" 
+                                 th:href="${paginationProducts.first} ? '#' : @{/productList(page=${paginationProducts.number - 1}, name=${param.name})}">
+                                 Previous
+                              </a>
+                        </li>
+
+                        <!-- Các nút số trang -->
+                        <th:block th:each="i : ${#numbers.sequence(0, paginationProducts.totalPages - 1)}">
+                              <li class="page-item" th:classappend="${i == paginationProducts.number} ? 'active'"> <!-- SỬA Ở ĐÂY (nếu có) -->
+                                 <a class="page-link" 
+                                    th:href="@{/productList(page=${i}, name=${param.name})}" 
+                                    th:text="${i + 1}">
+                                 </a>
+                              </li>
+                        </th:block>
+
+                        <!-- Nút Next -->
+                        <li class="page-item" th:classappend="${paginationProducts.last} ? 'disabled'"> <!-- SỬA Ở ĐÂY -->
+                              <a class="page-link" 
+                                 th:href="${paginationProducts.last} ? '#' : @{/productList(page=${paginationProducts.number + 1}, name=${param.name})}">
+                                 Next
+                              </a>
+                        </li>
+                     </ul>
+                  </nav>
+            </div>
          </div>
-         </div>
-      </div> <!-- nav end -->
-    </div><!-- container end -->
-  
+      </div>
 
-
-<!-- ------------------------------Offer end---------------------------------- -->
-      
-      
+       <!-- Footer -->
+       <th:block th:include="_footer"></th:block>
        
+       <!-- Footer -->
+  
       <th:block th:include="_footer"></th:block>
        
    </body>
