@@ -38,9 +38,14 @@ services:
       - SERVER_FORWARD_HEADERS_STRATEGY=NATIVE
       - SERVER_SERVLET_CONTEXT_PATH=/
       - PRODUCT_SERVICE_URL=http://product-service:8081/api/v1/products
+      - ORDER_SERVICE_URL=http://order-service:8082/api/v1/orders
 
     depends_on:
       db:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
         condition: service_healthy
     networks:
       - shoe_shop_network

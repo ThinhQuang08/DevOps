@@ -33,7 +33,6 @@ public class OrderController {
             if (cartInfo == null || cartInfo.getCustomerInfo() == null || cartInfo.getCartLines().isEmpty()) {
                 return ResponseEntity.badRequest().body("Cart information is incomplete or empty.");
             }
-            // (Tùy chọn) Validate thêm cho cartInfo ở đây nếu cần
 
             OrderInfo createdOrder = orderService.createOrder(cartInfo);
             logger.info("Order created successfully with ID: {}", createdOrder.getId());
