@@ -8,11 +8,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional; // Có thể không cần ở đây nữa nếu chỉ gọi API
+// import org.springframework.transaction.annotation.Transactional; // Có thể không cần ở đây nữa
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -26,31 +29,34 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import com.example.demo.dao.OrderDAO;
+// import com.example.demo.dao.OrderDAO; // Sẽ không dùng OrderDAO trực tiếp nữa
 import com.example.demo.form.CustomerForm;
 import com.example.demo.model.CartInfo;
 import com.example.demo.model.CustomerInfo;
 import com.example.demo.model.ProductInfo;
-import com.example.demo.utils.CustomPageImpl; // Đảm bảo import đúng
+import com.example.demo.model.OrderInfo; // Import OrderInfo DTO của BE
+import com.example.demo.utils.CustomPageImpl;
 import com.example.demo.utils.Utils;
 import com.example.demo.validator.CustomerFormValidator;
-import org.slf4j.Logger; // Thêm logger
-import org.slf4j.LoggerFactory; // Thêm logger
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
-// @Transactional // Có thể không cần thiết ở cấp controller nữa nếu các thao tác DB đã được quản lý bởi các service API
 public class MainController {
 
-   private static final Logger logger = LoggerFactory.getLogger(MainController.class); // Thêm logger
+   private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
-   @Autowired
-   private OrderDAO orderDAO;
+   // @Autowired // Không inject OrderDAO nữa
+   // private OrderDAO orderDAO;
 
    @Autowired
    private RestTemplate restTemplate;
 
-   @Value("${PRODUCT_SERVICE_URL:http://localhost:8081/api/v1/products}") // URL cơ sở của product-service API
+   @Value("${PRODUCT_SERVICE_URL:http://localhost:8081/api/v1/products}")
    private String productServiceBaseUrl;
+
+   @Value("${ORDER_SERVICE_URL:http://localhost:8082/api/v1/orders}") // Thêm URL cho Order Service
+   private String orderServiceBaseUrl;
 
    @Autowired
    private CustomerFormValidator customerFormValidator;
@@ -58,53 +64,37 @@ public class MainController {
    @InitBinder
    public void myInitBinder(WebDataBinder dataBinder) {
       Object target = dataBinder.getTarget();
-      if (target == null) {
-         return;
-      }
-      // System.out.println("Target=" + target); // Có thể comment lại sau khi debug
+      if (target == null) { return; }
       if (target.getClass() == CartInfo.class) {
-         // Logic cho CartInfo nếu cần
       } else if (target.getClass() == CustomerForm.class) {
          dataBinder.setValidator(customerFormValidator);
       }
    }
 
    @RequestMapping("/403")
-   public String accessDenied() {
-      return "/403";
-   }
+   public String accessDenied() { return "/403"; }
 
    @RequestMapping("/")
-   public String home() {
-      return "index";
-   }
+   public String home() { return "index"; }
 
    @RequestMapping({ "/productList" })
    public String listProductHandler(Model model,
          @RequestParam(value = "name", defaultValue = "") String likeName,
          @RequestParam(value = "page", defaultValue = "0") int page) {
       final int MAX_RESULT = 8;
-
       String url = productServiceBaseUrl + "?page=" + page + "&size=" + MAX_RESULT;
       if (likeName != null && !likeName.isEmpty()) {
          try {
-            // URL Encode likeName để tránh lỗi nếu có ký tự đặc biệt
             url += "&name=" + java.net.URLEncoder.encode(likeName, "UTF-8");
          } catch (java.io.UnsupportedEncodingException e) {
             logger.error("Error encoding likeName parameter", e);
          }
       }
-
       try {
          ResponseEntity<CustomPageImpl<ProductInfo>> response = restTemplate.exchange(
-               url,
-               HttpMethod.GET,
-               null,
-               new ParameterizedTypeReference<CustomPageImpl<ProductInfo>>() {});
-
+               url, HttpMethod.GET, null, new ParameterizedTypeReference<CustomPageImpl<ProductInfo>>() {});
          if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-            Page<ProductInfo> productPage = response.getBody();
-            model.addAttribute("paginationProducts", productPage);
+            model.addAttribute("paginationProducts", response.getBody());
          } else {
             logger.warn("Could not load products from API. Status: {}, URL: {}", response.getStatusCode(), url);
             model.addAttribute("errorMessage", "Could not load products. Status: " + response.getStatusCode());
@@ -141,7 +131,6 @@ public class MainController {
             logger.error("Error fetching product from service with code: {}", code, e);
          }
       }
-
       if (productInfo != null) {
          CartInfo cartInfo = Utils.getCartInSession(request);
          cartInfo.addProduct(productInfo, 1);
@@ -152,23 +141,18 @@ public class MainController {
    }
 
    @RequestMapping({ "/shoppingCartRemoveProduct" })
-   public String removeProductHandler(HttpServletRequest request, Model model,
-         @RequestParam(value = "code", defaultValue = "") String code) {
-      // Để remove product khỏi cart, chúng ta chỉ cần ProductInfo (code là đủ)
-      // Không cần gọi API product-service ở đây nếu CartInfo lưu trữ đủ thông tin
+   public String removeProductHandler(HttpServletRequest request, @RequestParam(value = "code", defaultValue = "") String code) {
       if (code != null && !code.isEmpty()) {
          CartInfo cartInfo = Utils.getCartInSession(request);
-         // Tạo ProductInfo tạm chỉ với code để remove, hoặc CartInfo.removeProduct chỉ cần code
          ProductInfo productInfoToRemove = new ProductInfo();
          productInfoToRemove.setCode(code);
-         cartInfo.removeProduct(productInfoToRemove); // Giả sử CartInfo.removeProduct hoạt động với ProductInfo chỉ có code
+         cartInfo.removeProduct(productInfoToRemove);
       }
       return "redirect:/shoppingCart";
    }
 
    @RequestMapping(value = { "/shoppingCart" }, method = RequestMethod.POST)
-   public String shoppingCartUpdateQty(HttpServletRequest request, Model model,
-         @ModelAttribute("cartForm") CartInfo cartForm) {
+   public String shoppingCartUpdateQty(HttpServletRequest request, @ModelAttribute("cartForm") CartInfo cartForm) {
       CartInfo cartInfo = Utils.getCartInSession(request);
       cartInfo.updateQuantity(cartForm);
       return "redirect:/shoppingCart";
@@ -177,8 +161,8 @@ public class MainController {
    @RequestMapping(value = { "/shoppingCart" }, method = RequestMethod.GET)
    public String shoppingCartHandler(HttpServletRequest request, Model model) {
       CartInfo myCart = Utils.getCartInSession(request);
-      model.addAttribute("cartForm", myCart); // cartForm để update quantity
-      model.addAttribute("myCart", myCart);   // myCart để hiển thị
+      model.addAttribute("cartForm", myCart);
+      model.addAttribute("myCart", myCart);
       return "shoppingCart";
    }
 
@@ -221,36 +205,64 @@ public class MainController {
       return "shoppingCartConfirmation";
    }
 
+   // POST: Submit Cart (Save Order via Order Service API)
    @RequestMapping(value = { "/shoppingCartConfirmation" }, method = RequestMethod.POST)
-   @Transactional // Vẫn cần Transactional ở đây cho việc saveOrder
    public String shoppingCartConfirmationSave(HttpServletRequest request, Model model) {
-      CartInfo cartInfo = Utils.getCartInSession(request);
+      CartInfo cartInfo = Utils.getCartInSession(request); // Đây là CartInfo DTO của BE
+
       if (cartInfo.isEmpty()) {
+         logger.warn("Attempted to save an empty cart.");
          return "redirect:/shoppingCart";
       } else if (!cartInfo.isValidCustomer()) {
+         logger.warn("Attempted to save cart with invalid customer info.");
          return "redirect:/shoppingCartCustomer";
       }
+
       try {
-         orderDAO.saveOrder(cartInfo); // Giữ nguyên, vì OrderDAO chưa tách
+         HttpHeaders headers = new HttpHeaders();
+         headers.setContentType(MediaType.APPLICATION_JSON);
+         HttpEntity<CartInfo> requestEntity = new HttpEntity<>(cartInfo, headers);
+
+         // OrderInfo.class ở đây là com.example.demo.model.OrderInfo (DTO của BE)
+         ResponseEntity<OrderInfo> response = restTemplate.postForEntity(
+               orderServiceBaseUrl, // URL của order-service API
+               requestEntity,
+               OrderInfo.class);
+
+         if (response.getStatusCode() == HttpStatus.CREATED && response.getBody() != null) {
+            OrderInfo createdOrder = response.getBody();
+            logger.info("Order created successfully via API, Order ID: {}", createdOrder.getId());
+            request.getSession().setAttribute("lastOrderInfo", createdOrder);
+            Utils.removeCartInSession(request);
+            return "redirect:/shoppingCartFinalize";
+         } else {
+            logger.error("Error creating order via API. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
+            model.addAttribute("errorMessage", "Could not create order. Service responded with status: " + response.getStatusCode());
+            model.addAttribute("myCart", cartInfo);
+            return "shoppingCartConfirmation";
+         }
+      } catch (HttpClientErrorException e) {
+         logger.error("API Client Error while creating order. Status: {}, Body: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+         model.addAttribute("errorMessage", "API Error: " + e.getStatusCode() + " - Could not save order.");
+         model.addAttribute("myCart", cartInfo);
+         return "shoppingCartConfirmation";
       } catch (Exception e) {
-         logger.error("Error saving order", e);
-         // Có thể thêm message lỗi vào model và trả về trang confirmation để hiển thị
-         model.addAttribute("errorMessage", "Error saving order: " + e.getMessage());
-         model.addAttribute("myCart", cartInfo); // Gửi lại cartInfo để hiển thị lại form
+         logger.error("Unexpected error while saving order via API.", e);
+         model.addAttribute("errorMessage", "An unexpected error occurred: " + e.getMessage());
+         model.addAttribute("myCart", cartInfo);
          return "shoppingCartConfirmation";
       }
-      Utils.removeCartInSession(request);
-      Utils.storeLastOrderedCartInSession(request, cartInfo);
-      return "redirect:/shoppingCartFinalize";
    }
 
    @RequestMapping(value = { "/shoppingCartFinalize" }, method = RequestMethod.GET)
    public String shoppingCartFinalize(HttpServletRequest request, Model model) {
-      CartInfo lastOrderedCart = Utils.getLastOrderedCartInSession(request);
-      if (lastOrderedCart == null) {
+      OrderInfo lastOrder = (OrderInfo) request.getSession().getAttribute("lastOrderInfo");
+      // Utils.removeLastOrderedCartInSession(request); // Xem xét có nên xóa ngay không
+
+      if (lastOrder == null) {
          return "redirect:/shoppingCart";
       }
-      model.addAttribute("lastOrderedCart", lastOrderedCart);
+      model.addAttribute("lastOrderInfo", lastOrder);
       return "shoppingCartFinalize";
    }
 
@@ -260,7 +272,6 @@ public class MainController {
          try {
             String imageUrl = productServiceBaseUrl + "/" + code + "/image";
             ResponseEntity<byte[]> imageResponse = restTemplate.getForEntity(imageUrl, byte[].class);
-
             if (imageResponse.getStatusCode() == HttpStatus.OK && imageResponse.getBody() != null) {
                String contentType = imageResponse.getHeaders().getFirst("Content-Type");
                response.setContentType(contentType != null ? contentType : "image/jpeg");
@@ -278,6 +289,5 @@ public class MainController {
       } else {
          response.sendError(HttpServletResponse.SC_BAD_REQUEST);
       }
-      // Không cần close outputStream ở đây, servlet container sẽ làm
    }
 }
